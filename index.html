@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+	<head>
+	    <meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Incidents</title>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+	</head>
+	
+	<body style="font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif; background-color: #000000; color: #ffffff;">
+		<h1>Incidents</h1>
+		<table id="incidentsTable" class="table table-dark table-hover" data-show-columns="true" data-show-multi-sort="true" style="display: none">
+			<thead>
+				<tr>
+					<th></th>
+					<th>Date and Time</th>
+					<th class="text-center">ID</th>
+					<th>Location name</th>
+					<th>Incident name</th>
+					<th>Description</th>					
+				</tr>
+			</thead>
+			<tbody id="incidentsTableBody"></tbody>
+		</table>
+		<p id="tester" style="display:none">blah</p>
+		<table id="incidentsList" class="table table-dark table-hover" style="list-style-type: none; display: none">
+			<tbody id="incidentsListBody"></tbody>
+		</table>
+	</body>
+	
+	<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>	
+	<script type="text/javascript" src="./src/js/jquery.tablesort.js"></script>
+	<script>
+		$(document).ready(function() {
+			$(window).trigger('resize');
+		});
+		$(window).resize(function() {
+			if ($(window).width() < 600) {
+				$('#incidentsTable').hide();
+				$('#incidentsList').show();
+			} else {
+				$('#incidentsTable').show();
+				$('#incidentsList').hide();
+			}
+		});		
+	</script>
+	
+	<script type="module">
+		import fakeApi from './src/js/fake-api.js';
+		
+		var dupes = [];
+
+		var loadLocations = function() {
+			fakeApi.getLocations()
+			.then(function(locations) {
+				locations.forEach(function(location) {
+					var loadIncidents = function() {
+						fakeApi.getIncidentsByLocationId(location.id)
+						.then(function(incidents) {
+							if (incidents) {
+								incidents.forEach(function(incident) {
+									if (!dupes.includes(incident.id)) {
+										dupes.push(incident.id);
+										var image = getPriorityImage(incident.priority);
+										var date = new Date(incident.datetime);
+										var rows = "<tr>" +
+													"<td style='display: none'>" + incident.priority + date.toISOString() + "</td>" +
+													"<td><img src=" + image + ">" + "</td>" +
+													"<td id='datetime'>" + formatDate(incident.datetime) + "</td>" +
+													"<td id='id' class='text-center'>" + incident.id + "</td>" +
+													"<td id='locationName'>" + location.name + "</td>" +
+													"<td id='incidentName'>" + incident.name + "</td>" +
+													"<td id='description'>" + "No description available." + "</td>" +
+												   "</tr>";							
+										$('#incidentsTableBody').append(rows);										
+									
+										var rows = "<tr>" +
+													"<td style='display: none'>" + incident.priority + date.toISOString() + "</td>" +
+													"<td><img src=" + image + ">" + "</td>" +
+													"<td>" +
+													 "<li>" + formatDate(incident.datetime) + "</li>" +
+													 "<li>" + location.name + "</li>" +
+													 "<li>" + incident.name + "</li>" +
+													 "<li>" + "No description available." + "</li>" +
+													"</td>" +
+												   "</tr>";
+										$('#incidentsListBody').append(rows);
+									}									
+								});							
+								sortTable("incidentsTable");
+								sortTable("incidentsList");
+							}							
+						})
+					}();					
+				});
+			})
+			.catch(function(error) {
+			})
+		}();
+	</script>
+	
+	<script>
+		function formatDate(date) {
+			var d = new Date(date);
+			var o = {
+				day: "numeric", year: "numeric", month: "numeric",  
+				hour: "numeric", minute: "numeric", second: "numeric"
+			};
+			return d.toLocaleTimeString("en-us", o);
+		}
+		
+		function getPriorityImage(priority)
+		{		
+			if (priority === 1) {
+				return './src/img/alarm-high.svg';
+			} else if (priority === 2) {
+				return './src/img/alarm-medium.svg';
+			} else {
+				return './src/img/alarm-low.svg';
+			}
+		}
+		
+		function sortTable(tbl) {
+			var tbl = document.getElementById(tbl).tBodies[0];
+			var store = [];
+			for (var i = 0, len = tbl.rows.length; i < len; i++) {
+				var row = tbl.rows[i];
+				var sortnr = parseFloat(row.cells[0].textContent || row.cells[0].innerText);
+				if (!isNaN(sortnr)) store.push([sortnr, row]);
+			}
+			store.sort(function(x,y) {
+				return x[0] - y[0];
+			});
+			for (var i = 0, len = store.length; i < len; i++) {
+				tbl.appendChild(store[i][1]);
+			}
+			store = null;
+		}
+	</script>
+</html>
